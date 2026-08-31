@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #070d18;
+    --bg-surface: #0b1320;
+    --bg-card: #111c2e;
+    --bg-card-hover: #18263e;
+    --border-polar: #1e293b;
+    --border-highlight: #0284c7;
+    --accent-ice: #38bdf8;
+    --accent-cyan: #22d3ee;
+    --status-danger: #ef4444;
+    --status-warning: #f59e0b;
+    --status-success: #10b981;
+  }
+
+  body {
+    background-color: #070d18;
+    color: #f8fafc;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  code, pre, .font-telemetry {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  h1, h2, h3, .font-heading {
+    font-family: 'Outfit', 'Inter', sans-serif;
+  }
+}
+
+/* Custom scrollbar for Arctic Tactical Feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0b1320;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #0284c7;
+}
+
+/* Leaflet Map overrides for Dark Polar Aesthetic */
+.leaflet-container {
+  background-color: #08101d !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.leaflet-tile-pane {
+  filter: brightness(0.65) contrast(1.2) hue-rotate(190deg) saturate(0.7);
+}
+
+.leaflet-popup-content-wrapper {
+  background: #0b1320 !important;
+  color: #f8fafc !important;
+  border: 1px solid #0284c7 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7) !important;
+}
+
+.leaflet-popup-tip {
+  background: #0b1320 !important;
+  border: 1px solid #0284c7 !important;
+}
+
+/* Polar radar scan pulse keyframe */
+@keyframes polarPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(14, 165, 233, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0);
+  }
+}
+
+.animate-polar-pulse {
+  animation: polarPulse 2s infinite;
+}
+
+@keyframes sosFlash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.animate-sos-flash {
+  animation: sosFlash 1s infinite;
+}
