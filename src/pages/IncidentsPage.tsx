@@ -1,9 +1,12 @@
 import React from 'react';
 import { ShieldAlert, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
-import { INITIAL_SOS_ALERTS, INITIAL_FIELD_UPDATES } from '@/lib/mockData';
+import { INITIAL_FIELD_UPDATES } from '@/lib/mockData';
 import { EmergencyResponsePanel } from '@/features/emergencies/components/EmergencyResponsePanel';
+import { useAppData } from '@/context/AppDataContext';
 
 export const IncidentsPage: React.FC = () => {
+  const { sosAlerts } = useAppData();
+  const activeAlerts = sosAlerts.filter((s) => s.status !== 'RESOLVED');
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0b1424] border border-cyan-900/60 p-5 rounded-xl">
@@ -24,7 +27,7 @@ export const IncidentsPage: React.FC = () => {
       </div>
 
       {/* Active Emergency SOS Command Panel */}
-      <EmergencyResponsePanel sos={INITIAL_SOS_ALERTS[0] || null} />
+      <EmergencyResponsePanel sos={activeAlerts[0] || null} />
 
       {/* Historical Incident Log */}
       <div className="bg-[#0b1320] border border-slate-800 rounded-xl p-5 space-y-3 font-sans">

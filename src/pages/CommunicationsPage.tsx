@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MessageSquare, Send, Radio, Satellite, Wifi, ShieldAlert, CheckCircle2, User, Users, Target, ShieldCheck } from 'lucide-react';
-import { INITIAL_TEAMS, INITIAL_PERSONNEL, INITIAL_MISSIONS, INITIAL_SOS_ALERTS } from '@/lib/mockData';
+import { INITIAL_TEAMS, INITIAL_PERSONNEL, INITIAL_MISSIONS } from '@/lib/mockData';
 import type { Message, CommChannel, SatelliteStatus } from '@/types';
 import { messageService, auditService } from '@/services';
 import { useAuth } from '@/context/AuthContext';

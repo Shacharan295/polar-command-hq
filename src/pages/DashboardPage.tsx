@@ -12,7 +12,6 @@ import type { NavTab } from '@/components/layout/Sidebar';
 import { KPIStrip } from '@/features/dashboard/components/KPIStrip';
 import { LiveMap } from '@/features/dashboard/components/LiveMap';
 import { PersonnelDrawer } from '@/features/personnel/components/PersonnelDrawer';
-import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import { useAppData } from '@/context/AppDataContext';
 import { INITIAL_MISSIONS, INITIAL_WEATHER, INITIAL_AUDIT_LOGS } from '@/lib/mockData';
 
@@ -28,11 +27,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   // ─── Global shared state from AppDataContext ───────────────────────────────
   const {
     personnel,
-    setPersonnel,
     sosAlerts,
-    setSosAlerts,
     fieldUpdates,
-    setFieldUpdates,
     resources,
     activeSOSAlerts,
     resourceAlerts,
@@ -40,30 +36,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
 
-  // Subscribe to Supabase Realtime Stream (updates shared context state)
-  useSupabaseRealtime({
-    onSOSAlert: (payload) => {
-      if (payload.new) {
-        setSosAlerts((prev) => [payload.new as any, ...prev]);
-      }
-    },
-    onFieldUpdate: (payload) => {
-      if (payload.new) {
-        setFieldUpdates((prev) => [payload.new as any, ...prev]);
-      }
-    },
-    onLocationUpdate: (payload) => {
-      if (payload.new && payload.new.personnel_id) {
-        setPersonnel((prev) =>
-          prev.map((p) =>
-            p.id === payload.new.personnel_id
-              ? { ...p, latitude: payload.new.latitude, longitude: payload.new.longitude }
-              : p
-          )
-        );
-      }
-    },
-  });
+  // Subscription is now handled globally in AppDataContext
 
   // ─── Derived from shared state ─────────────────────────────────────────────
   // Show the most critical active SOS in the priority card

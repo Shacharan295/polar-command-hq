@@ -53,8 +53,8 @@ export const EmergencyResponsePanel: React.FC<EmergencyResponsePanelProps> = ({
     );
   }
 
-  const personnel = INITIAL_PERSONNEL.find((p) => p.id === sos.personnel_id) || INITIAL_PERSONNEL[0];
-  const assignedMission = INITIAL_MISSIONS.find((m) => m.id === personnel.assigned_mission_id) || null;
+  const personnel = sos.personnel_id ? INITIAL_PERSONNEL.find((p) => p.id === sos.personnel_id) : null;
+  const assignedMission = personnel ? INITIAL_MISSIONS.find((m) => m.id === personnel.assigned_mission_id) : null;
   // Derive team name from SOS team_id rather than hardcoding
   const sosTeam = INITIAL_TEAMS.find((t) => t.id === sos.team_id);
   const teamLabel = sosTeam ? `${sosTeam.name} (${sosTeam.callsign})` : 'Unassigned';
@@ -102,7 +102,7 @@ export const EmergencyResponsePanel: React.FC<EmergencyResponsePanelProps> = ({
       actionLabel,
       'SOSAlert',
       sos.id,
-      `SOS Emergency Status changed to ${newStatus} for ${personnel.full_name}`
+      `SOS Emergency Status changed to ${newStatus} for ${personnel?.full_name || 'Unassigned'}`
     );
 
     setFeedback(`Action executed: "${actionLabel}". Database status updated to ${newStatus}.`);
@@ -174,7 +174,7 @@ export const EmergencyResponsePanel: React.FC<EmergencyResponsePanelProps> = ({
           <span className="text-slate-500 text-[10px] uppercase font-bold flex items-center gap-1">
             <User className="w-3.5 h-3.5 text-cyan-400" /> Personnel & Team
           </span>
-          <div className="font-extrabold text-slate-100 text-sm">{personnel.full_name}</div>
+          <div className="font-extrabold text-slate-100 text-sm">{personnel?.full_name || 'Unassigned'}</div>
           <div className="text-cyan-300 text-[11px]">{teamLabel}</div>
         </div>
 
@@ -408,7 +408,7 @@ export const EmergencyResponsePanel: React.FC<EmergencyResponsePanelProps> = ({
       )}
 
       {/* Modals */}
-      {activeModal === 'instructions' && (
+      {activeModal === 'instructions' && personnel && (
         <EmergencyInstructionsModal
           sos={sos}
           personnel={personnel}

@@ -19,6 +19,14 @@ export const personnelService = {
 };
 
 export const sosService = {
+  async getAll(): Promise<SOSAlert[]> {
+    const { data, error } = await supabase.from('sos_alerts').select('*').order('created_at', { ascending: false });
+    if (error) {
+      console.warn('sosService.getAll error:', error.message);
+      return [];
+    }
+    return data || [];
+  },
   async getActive(): Promise<SOSAlert[]> {
     const { data, error } = await supabase.from('sos_alerts').select('*').neq('status', 'RESOLVED');
     if (error) {

@@ -1,19 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldAlert, AlertTriangle, CheckCircle2, History } from 'lucide-react';
 import { useAppData } from '@/context/AppDataContext';
-import { INITIAL_PERSONNEL } from '@/lib/mockData';
 import type { SOSAlert } from '@/types';
 import { EmergencyResponsePanel } from '@/features/emergencies/components/EmergencyResponsePanel';
 
 export const EmergencyPage: React.FC = () => {
   // ─── Use shared context — changes here propagate to Dashboard, map, badge ──
-  const { sosAlerts, resolveSOSAlert } = useAppData();
+  const { sosAlerts, resolveSOSAlert, personnel } = useAppData();
 
   const activeAlerts = sosAlerts.filter((s) => s.status !== 'RESOLVED');
   const resolvedAlerts = sosAlerts.filter((s) => s.status === 'RESOLVED');
 
   // Default to the most critical unresolved alert
   const [selectedSOS, setSelectedSOS] = useState<SOSAlert | null>(activeAlerts[0] || null);
+
+  // Keep selectedSOS in sync if it's missing or gets resolved remotely
+  useEffect(() => {
+    if (!selectedSOS || !activeAlerts.find((s) => s.id === selectedSOS.id)) {
+      setSelectedSOS(activeAlerts.length > 0 ? activeAlerts[0] : null);
+    }
+  }, [activeAlerts, selectedSOS]);
 
   // When resolved via the response panel, use the shared context action
   // then auto-select the next active alert
@@ -75,7 +81,7 @@ export const EmergencyPage: React.FC = () => {
             ) : (
               <div className="space-y-2.5">
                 {activeAlerts.map((sos) => {
-                  const person = INITIAL_PERSONNEL.find((p) => p.id === sos.personnel_id);
+                  const person = sos.personnel_id ? personnel.find((p) => p.id === sos.personnel_id) : null;
                   const isSelected = selectedSOS?.id === sos.id;
                   return (
                     <div
@@ -88,7 +94,7 @@ export const EmergencyPage: React.FC = () => {
                       }`}
                     >
                       <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="font-bold text-red-300">🚨 {person?.full_name || 'Field Personnel'}</span>
+                        <span className="font-bold text-red-300">🚨 {person?.full_name || 'Unassigned'}</span>
                         <span className="text-[10px] bg-red-900/80 px-2 py-0.5 rounded text-red-200 uppercase font-bold">
                           {sos.status}
                         </span>
@@ -114,11 +120,11 @@ export const EmergencyPage: React.FC = () => {
 
             <div className="space-y-2 max-h-60 overflow-y-auto font-mono text-xs">
               {resolvedAlerts.map((sos) => {
-                const person = INITIAL_PERSONNEL.find((p) => p.id === sos.personnel_id);
+                const person = sos.personnel_id ? personnel.find((p) => p.id === sos.personnel_id) : null;
                 return (
                   <div key={sos.id} className="p-3 bg-[#060c16] rounded-lg border border-slate-800/80 space-y-1">
                     <div className="flex justify-between items-center text-[11px]">
-                      <span className="font-bold text-slate-200">{person?.full_name}</span>
+                      <span className="font-bold text-slate-200">{person?.full_name || 'Unassigned'}</span>
                       <span className="text-emerald-400 text-[10px] font-bold">✓ RESOLVED</span>
                     </div>
                     <p className="text-[11px] text-slate-400 font-sans line-clamp-1">{sos.description}</p>

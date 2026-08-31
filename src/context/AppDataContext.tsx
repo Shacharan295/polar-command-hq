@@ -8,7 +8,7 @@
  * other component without any manual prop threading.
  */
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type {
   Personnel,
   Mission,
@@ -21,11 +21,12 @@ import type {
 import {
   INITIAL_PERSONNEL,
   INITIAL_MISSIONS,
-  INITIAL_SOS_ALERTS,
   INITIAL_RESOURCES,
   INITIAL_FIELD_UPDATES,
   INITIAL_AUDIT_LOGS,
 } from '@/lib/mockData';
+import { sosService } from '@/services';
+import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 
 // ---------------------------------------------------------------------------
 // Context shape
@@ -77,36 +78,7 @@ const AppDataContext = createContext<AppDataContextValue | null>(null);
 const buildInitialNotifications = (): NotificationItem[] => {
   const now = Date.now();
   return [
-    {
-      id: 'notif-sos-001',
-      type: 'NEW_SOS',
-      title: '🚨 SOS — Arjun Kumar',
-      message: 'Polar Rover Engine Overheating at Mount Erebus Ridge Camp B. Immediate response required.',
-      target_id: '55555555-5555-5555-5555-000000000001',
-      target_type: 'SOSAlert',
-      read: false,
-      created_at: new Date(now - 180000).toISOString(),
-    },
-    {
-      id: 'notif-sos-002',
-      type: 'NEW_SOS',
-      title: '🚨 SOS — Karin Olsen',
-      message: 'Satellite Relay Beacon Lost & Frostbite Threat at Mount Erebus Outpost Relay.',
-      target_id: '55555555-5555-5555-5555-000000000002',
-      target_type: 'SOSAlert',
-      read: false,
-      created_at: new Date(now - 3600000).toISOString(),
-    },
-    {
-      id: 'notif-sos-003',
-      type: 'NEW_SOS',
-      title: '🚨 SOS — Ingrid Solberg',
-      message: 'Main Power Substation Transformer Short Circuit at Concordia Generator Substation.',
-      target_id: '55555555-5555-5555-5555-000000000003',
-      target_type: 'SOSAlert',
-      read: false,
-      created_at: new Date(now - 7200000).toISOString(),
-    },
+
     {
       id: 'notif-resource-001',
       type: 'RESOURCE_SHORTAGE',
@@ -157,11 +129,94 @@ const buildInitialNotifications = (): NotificationItem[] => {
 export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [personnel, setPersonnel] = useState<Personnel[]>(INITIAL_PERSONNEL);
   const [missions, setMissions] = useState<Mission[]>(INITIAL_MISSIONS);
-  const [sosAlerts, setSosAlerts] = useState<SOSAlert[]>(INITIAL_SOS_ALERTS);
+  const [sosAlerts, setSosAlerts] = useState<SOSAlert[]>([]);
   const [resources, setResources] = useState<Resource[]>(INITIAL_RESOURCES);
   const [fieldUpdates, setFieldUpdates] = useState<FieldUpdate[]>(INITIAL_FIELD_UPDATES);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
   const [notifications, setNotifications] = useState<NotificationItem[]>(buildInitialNotifications);
+
+  // ---------------------------------------------------------------------------
+  // Initialize and Realtime Subscription
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      const activeSOS = await sosService.getAll();
+      setSosAlerts(prev => {
+        // Safe merge: keep any realtime records that arrived before the fetch completed
+        const existingIds = new Set(prev.map(s => s.id));
+        const missingFromPrev = activeSOS.filter(s => !existingIds.has(s.id));
+        console.log('[SOS_REALTIME] Initial fetch completed. Fetched:', activeSOS.length, 'Merged:', missingFromPrev.length);
+        return [...missingFromPrev, ...prev];
+      });
+    };
+    fetchInitialData();
+  }, []);
+
+  useSupabaseRealtime({
+    onSOSAlert: (payload) => {
+      if (payload.eventType === 'INSERT') {
+        console.log('[SOS_REALTIME] SOS INSERT received:', payload.new);
+        const newSos = payload.new as SOSAlert;
+        
+        console.log('[SOS_REALTIME] BEFORE STATE UPDATE');
+        setSosAlerts((prev) => {
+          if (prev.find((s) => s.id === newSos.id)) {
+            console.log('[SOS_REALTIME] AFTER STATE UPDATE - Ignored (duplicate), Count:', prev.length);
+            return prev;
+          }
+          console.log('[SOS_REALTIME] SOS state updated (INSERT). AFTER STATE UPDATE - Count:', prev.length + 1);
+          return [newSos, ...prev];
+        });
+        
+        // Generate a notification for the new SOS
+        const personnelName = personnel.find(p => p.id === newSos.personnel_id)?.full_name || 'Field Unit';
+        setNotifications((prev) => [
+          {
+            id: `notif-sos-${newSos.id}`,
+            type: 'NEW_SOS',
+            title: `🚨 SOS — ${personnelName}`,
+            message: newSos.description,
+            target_id: newSos.id,
+            target_type: 'SOSAlert',
+            read: false,
+            created_at: newSos.created_at,
+          },
+          ...prev
+        ]);
+      } else if (payload.eventType === 'UPDATE') {
+        console.log('[SOS_REALTIME] SOS UPDATE received:', payload.new);
+        const updatedSos = payload.new as SOSAlert;
+        setSosAlerts((prev) => {
+          console.log('[SOS_REALTIME] SOS state updated (UPDATE)');
+          return prev.map((s) => (s.id === updatedSos.id ? updatedSos : s));
+        });
+      } else if (payload.eventType === 'DELETE') {
+        console.log('[SOS_REALTIME] SOS DELETE received:', payload.old);
+        const deletedSos = payload.old as SOSAlert;
+        setSosAlerts((prev) => {
+          console.log('[SOS_REALTIME] SOS state updated (DELETE)');
+          return prev.filter((s) => s.id !== deletedSos.id);
+        });
+      }
+    },
+    onFieldUpdate: (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setFieldUpdates((prev) => [payload.new as any, ...prev]);
+      }
+    },
+    onLocationUpdate: (payload) => {
+      if (payload.eventType === 'INSERT' && payload.new.personnel_id) {
+        setPersonnel((prev) =>
+          prev.map((p) =>
+            p.id === payload.new.personnel_id
+              ? { ...p, latitude: payload.new.latitude, longitude: payload.new.longitude }
+              : p
+          )
+        );
+      }
+    },
+  });
 
   // ---------------------------------------------------------------------------
   // Derived values (computed, not stored — always fresh)
